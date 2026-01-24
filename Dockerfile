@@ -32,4 +32,6 @@ RUN pnpm ui:build
 
 ENV NODE_ENV=production
 
-CMD ["node", "--max-old-space-size=1024", "dist/index.js", "gateway", "--bind", "lan", "--port", "18789", "--allow-unconfigured"]
+EXPOSE 8080
+
+CMD ["node", "--max-old-space-size=1024", "dist/index.js", "gateway", "--bind", "lan", "--port", "8080", "--allow-unconfigured"]

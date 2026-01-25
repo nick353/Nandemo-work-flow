@@ -2,9 +2,11 @@
 set -e
 
 mkdir -p /root/.clawdbot
+mkdir -p /root/.clawdbot/agents/main/agent
 
 # Build channels config
 DISCORD_CONFIG=""
+DISCORD_PLUGIN=""
 if [ -n "$DISCORD_BOT_TOKEN" ]; then
   DISCORD_CONFIG='"discord": {
       "enabled": true,
@@ -16,7 +18,27 @@ if [ -n "$DISCORD_BOT_TOKEN" ]; then
       },
       "groupPolicy": "open"
     }'
+  DISCORD_PLUGIN='"discord": { "enabled": true }'
   echo "[entrypoint] Discord channel enabled"
+fi
+
+# Build auth profiles config
+AUTH_PROFILES=""
+if [ -n "$ANTHROPIC_API_KEY" ]; then
+  AUTH_PROFILES='"anthropic:default": { "provider": "anthropic", "mode": "api_key" }'
+  echo "[entrypoint] Anthropic API key configured"
+
+  # Create agent auth profiles file
+  cat > /root/.clawdbot/agents/main/agent/auth-profiles.json << EOF
+{
+  "anthropic:default": {
+    "provider": "anthropic",
+    "mode": "api_key",
+    "apiKey": "$ANTHROPIC_API_KEY"
+  }
+}
+EOF
+  echo "[entrypoint] Created auth-profiles.json for agent"
 fi
 
 # Create config file based on environment variables
@@ -32,8 +54,18 @@ if [ "$CLAWDBOT_NO_AUTH" = "true" ] || [ "$CLAWDBOT_NO_AUTH" = "1" ]; then
       "enabled": true
     }
   },
+  "auth": {
+    "profiles": {
+      $AUTH_PROFILES
+    }
+  },
   "channels": {
     $DISCORD_CONFIG
+  },
+  "plugins": {
+    "entries": {
+      $DISCORD_PLUGIN
+    }
   }
 }
 EOF
@@ -51,8 +83,18 @@ elif [ -n "$CLAWDBOT_GATEWAY_TOKEN" ]; then
       "enabled": true
     }
   },
+  "auth": {
+    "profiles": {
+      $AUTH_PROFILES
+    }
+  },
   "channels": {
     $DISCORD_CONFIG
+  },
+  "plugins": {
+    "entries": {
+      $DISCORD_PLUGIN
+    }
   }
 }
 EOF

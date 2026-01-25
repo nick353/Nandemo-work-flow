@@ -3,6 +3,22 @@ set -e
 
 mkdir -p /root/.clawdbot
 
+# Build channels config
+DISCORD_CONFIG=""
+if [ -n "$DISCORD_BOT_TOKEN" ]; then
+  DISCORD_CONFIG='"discord": {
+      "enabled": true,
+      "token": "'"$DISCORD_BOT_TOKEN"'",
+      "dm": {
+        "enabled": true,
+        "policy": "open",
+        "allowFrom": ["*"]
+      },
+      "groupPolicy": "open"
+    },'
+  echo "[entrypoint] Discord channel enabled"
+fi
+
 # Create config file based on environment variables
 if [ "$CLAWDBOT_NO_AUTH" = "true" ] || [ "$CLAWDBOT_NO_AUTH" = "1" ]; then
   # No authentication mode - open webchat access
@@ -14,6 +30,7 @@ if [ "$CLAWDBOT_NO_AUTH" = "true" ] || [ "$CLAWDBOT_NO_AUTH" = "1" ]; then
     }
   },
   "channels": {
+    $DISCORD_CONFIG
     "webchat": {
       "enabled": true,
       "policy": "open"
@@ -33,6 +50,7 @@ elif [ -n "$CLAWDBOT_GATEWAY_TOKEN" ]; then
     }
   },
   "channels": {
+    $DISCORD_CONFIG
     "webchat": {
       "enabled": true,
       "policy": "open"

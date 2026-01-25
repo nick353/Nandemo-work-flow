@@ -5,19 +5,25 @@ mkdir -p /root/.clawdbot
 
 # Create config file based on environment variables
 if [ "$CLAWDBOT_NO_AUTH" = "true" ] || [ "$CLAWDBOT_NO_AUTH" = "1" ]; then
-  # No authentication mode
+  # No authentication mode - open webchat access
   cat > /root/.clawdbot/clawdbot.json << EOF
 {
   "gateway": {
     "auth": {
       "mode": "none"
     }
+  },
+  "channels": {
+    "webchat": {
+      "enabled": true,
+      "policy": "open"
+    }
   }
 }
 EOF
   echo "[entrypoint] Created gateway config with NO auth (public access)"
 elif [ -n "$CLAWDBOT_GATEWAY_TOKEN" ]; then
-  # Token authentication mode
+  # Token authentication mode with open webchat
   cat > /root/.clawdbot/clawdbot.json << EOF
 {
   "gateway": {
@@ -25,10 +31,16 @@ elif [ -n "$CLAWDBOT_GATEWAY_TOKEN" ]; then
       "mode": "token",
       "token": "$CLAWDBOT_GATEWAY_TOKEN"
     }
+  },
+  "channels": {
+    "webchat": {
+      "enabled": true,
+      "policy": "open"
+    }
   }
 }
 EOF
-  echo "[entrypoint] Created gateway config with token auth"
+  echo "[entrypoint] Created gateway config with token auth + open webchat"
 else
   echo "[entrypoint] No auth config set. Set CLAWDBOT_GATEWAY_TOKEN or CLAWDBOT_NO_AUTH=true"
 fi

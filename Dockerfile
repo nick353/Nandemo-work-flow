@@ -30,8 +30,12 @@ ENV CLAWDBOT_PREFER_PNPM=1
 RUN pnpm ui:install
 RUN pnpm ui:build
 
+# Make entrypoint executable
+RUN chmod +x /app/scripts/docker-entrypoint.sh
+
 ENV NODE_ENV=production
 
 EXPOSE 8080
 
-CMD ["node", "--max-old-space-size=1024", "dist/index.js", "gateway", "--bind", "lan", "--port", "8080", "--allow-unconfigured"]
+ENTRYPOINT ["/app/scripts/docker-entrypoint.sh"]
+CMD []

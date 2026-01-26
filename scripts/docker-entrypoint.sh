@@ -46,13 +46,10 @@ fi
 
 # Create config file based on environment variables
 if [ "$CLAWDBOT_NO_AUTH" = "true" ] || [ "$CLAWDBOT_NO_AUTH" = "1" ]; then
-  # No authentication mode
+  # No authentication mode (omit auth.mode to disable auth)
   cat > /root/.clawdbot/clawdbot.json << EOF
 {
   "gateway": {
-    "auth": {
-      "mode": "none"
-    },
     "controlUi": {
       "enabled": true
     }

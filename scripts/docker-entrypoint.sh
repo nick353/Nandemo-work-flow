@@ -31,10 +31,13 @@ if [ -n "$ANTHROPIC_API_KEY" ]; then
   # Create agent auth profiles file
   cat > /root/.clawdbot/agents/main/agent/auth-profiles.json << EOF
 {
-  "anthropic:default": {
-    "provider": "anthropic",
-    "mode": "api_key",
-    "apiKey": "$ANTHROPIC_API_KEY"
+  "version": 1,
+  "profiles": {
+    "anthropic:default": {
+      "type": "token",
+      "provider": "anthropic",
+      "token": "$ANTHROPIC_API_KEY"
+    }
   }
 }
 EOF

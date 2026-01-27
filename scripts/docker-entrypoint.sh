@@ -24,12 +24,48 @@ fi
 
 # Build auth profiles config
 AUTH_PROFILES=""
-if [ -n "$ANTHROPIC_API_KEY" ]; then
+AUTH_PROFILES_FILE="/root/.clawdbot/agents/main/agent/auth-profiles.json"
+
+if [ -n "$ANTHROPIC_OAUTH_REFRESH_TOKEN" ]; then
+  # OAuth mode: use subscription OAuth tokens
+  AUTH_PROFILES='"anthropic:claude-cli": { "provider": "anthropic", "mode": "oauth" }'
+
+  # Preserve existing OAuth credentials if they were refreshed by the app (persistent storage)
+  SHOULD_WRITE_OAUTH=true
+  if [ -f "$AUTH_PROFILES_FILE" ]; then
+    if grep -q '"type".*:.*"oauth"' "$AUTH_PROFILES_FILE" 2>/dev/null && \
+       grep -q '"refresh"' "$AUTH_PROFILES_FILE" 2>/dev/null; then
+      echo "[entrypoint] Existing OAuth credentials found, preserving refreshed tokens"
+      SHOULD_WRITE_OAUTH=false
+    fi
+  fi
+
+  if [ "$SHOULD_WRITE_OAUTH" = true ]; then
+    OAUTH_ACCESS="${ANTHROPIC_OAUTH_ACCESS_TOKEN:-}"
+    OAUTH_EXPIRES="${ANTHROPIC_OAUTH_EXPIRES:-0}"
+    cat > "$AUTH_PROFILES_FILE" << EOF
+{
+  "version": 1,
+  "profiles": {
+    "anthropic:claude-cli": {
+      "type": "oauth",
+      "provider": "anthropic",
+      "access": "$OAUTH_ACCESS",
+      "refresh": "$ANTHROPIC_OAUTH_REFRESH_TOKEN",
+      "expires": $OAUTH_EXPIRES
+    }
+  }
+}
+EOF
+    echo "[entrypoint] Created auth-profiles.json with OAuth credentials"
+  fi
+
+elif [ -n "$ANTHROPIC_API_KEY" ]; then
   AUTH_PROFILES='"anthropic:default": { "provider": "anthropic", "mode": "api_key" }'
   echo "[entrypoint] Anthropic API key configured"
 
   # Create agent auth profiles file
-  cat > /root/.clawdbot/agents/main/agent/auth-profiles.json << EOF
+  cat > "$AUTH_PROFILES_FILE" << EOF
 {
   "version": 1,
   "profiles": {

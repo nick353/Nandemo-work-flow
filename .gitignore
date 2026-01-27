@@ -1,0 +1,21 @@
+# Clawdbot workspace gitignore
+
+# Node modules
+node_modules/
+
+# Logs
+*.log
+logs/
+
+# Temporary files
+*.tmp
+.DS_Store
+
+# Sensitive data
+*.key
+*.pem
+.env
+.git-credentials
+
+# 設定ファイル（機密情報を含む）
+clawdbot-config.json

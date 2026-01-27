@@ -1,0 +1,33 @@
+{
+  "auth": {
+    "profiles": {
+      "anthropic:claude-cli": { "provider": "anthropic", "mode": "oauth" }
+    }
+  },
+  "tools": {
+    "exec": {
+      "security": "full"
+    }
+  },
+  "channels": {
+    "discord": {
+      "enabled": true,
+      "token": "YOUR_DISCORD_TOKEN_HERE",
+      "groupPolicy": "open",
+      "dm": {
+        "enabled": true,
+        "policy": "open",
+        "allowFrom": ["*"]
+      }
+    }
+  },
+  "gateway": {
+    "controlUi": {
+      "enabled": true
+    },
+    "auth": {
+      "mode": "token",
+      "token": "YOUR_GATEWAY_TOKEN_HERE"
+    }
+  }
+}

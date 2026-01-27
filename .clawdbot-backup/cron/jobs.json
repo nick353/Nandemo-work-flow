@@ -1,0 +1,25 @@
+{
+  "version": 1,
+  "jobs": [
+    {
+      "id": "0d34a561-5d8a-4f15-8893-c4f1c87a4d7f",
+      "name": "auto-backup",
+      "enabled": true,
+      "createdAtMs": 1769515763312,
+      "updatedAtMs": 1769515763312,
+      "schedule": {
+        "kind": "cron",
+        "expr": "0 */2 * * *"
+      },
+      "sessionTarget": "main",
+      "wakeMode": "next-heartbeat",
+      "payload": {
+        "kind": "systemEvent",
+        "text": "GitHubに自動バックアップを実行してください。手順：1) cd /root/clawd 2) git add -A 3) git commit -m 'Auto backup: 日時' 4) git push origin main。変更がない場合は何もしなくてOK。"
+      },
+      "state": {
+        "nextRunAtMs": 1769522400000
+      }
+    }
+  ]
+}

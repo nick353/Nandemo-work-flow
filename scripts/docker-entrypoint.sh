@@ -11,6 +11,7 @@ if [ -n "$DISCORD_BOT_TOKEN" ]; then
   DISCORD_CONFIG='"discord": {
       "enabled": true,
       "token": "'"$DISCORD_BOT_TOKEN"'",
+      "requireMention": false,
       "dm": {
         "enabled": true,
         "policy": "open",
@@ -19,7 +20,7 @@ if [ -n "$DISCORD_BOT_TOKEN" ]; then
       "groupPolicy": "open"
     }'
   DISCORD_PLUGIN='"discord": { "enabled": true }'
-  echo "[entrypoint] Discord channel enabled"
+  echo "[entrypoint] Discord channel enabled (mention not required)"
 fi
 
 # Build auth profiles config

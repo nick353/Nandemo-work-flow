@@ -80,11 +80,21 @@ EOF
   echo "[entrypoint] Created auth-profiles.json for agent"
 fi
 
+# Default model (use Sonnet 4.5 instead of Opus to reduce costs)
+DEFAULT_MODEL="${CLAWDBOT_DEFAULT_MODEL:-anthropic/claude-sonnet-4-5}"
+
 # Create config file based on environment variables
 if [ "$CLAWDBOT_NO_AUTH" = "true" ] || [ "$CLAWDBOT_NO_AUTH" = "1" ]; then
   # No authentication mode (omit auth.mode to disable auth)
   cat > /root/.clawdbot/clawdbot.json << EOF
 {
+  "agents": {
+    "defaults": {
+      "model": {
+        "primary": "$DEFAULT_MODEL"
+      }
+    }
+  },
   "gateway": {
     "controlUi": {
       "enabled": true
@@ -110,6 +120,13 @@ elif [ -n "$CLAWDBOT_GATEWAY_TOKEN" ]; then
   # Token authentication mode
   cat > /root/.clawdbot/clawdbot.json << EOF
 {
+  "agents": {
+    "defaults": {
+      "model": {
+        "primary": "$DEFAULT_MODEL"
+      }
+    }
+  },
   "gateway": {
     "auth": {
       "mode": "token",

@@ -1,13 +1,11 @@
 # HEARTBEAT.md - 自動タスク
 
 ## 自動バックアップ
-- [x] ワークスペースをGitHubにバックアップ（2時間ごと）- cronジョブ設定済み
+ハートビート時にGitHubバックアップを実行してください：
 
-### バックアップ手順
-1. `cd /root/clawd`
-2. `git add -A`
-3. `git commit -m "Auto backup: $(date '+%Y-%m-%d %H:%M')"`
-4. `git push origin main`
+```bash
+/root/clawd/scripts/backup-with-retry.sh
+```
 
 ### リポジトリ
 - 本家: https://github.com/nick353/Nandemo-work-flow

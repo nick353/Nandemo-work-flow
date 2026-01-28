@@ -1,0 +1,12 @@
+{
+  "build": {
+    "env": []
+  },
+  "crons": [
+    {
+      "schedule": "0 */2 * * *",
+      "command": "bash /app/scripts/backup-config.sh",
+      "name": "auto-backup"
+    }
+  ]
+}

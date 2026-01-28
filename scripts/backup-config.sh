@@ -58,10 +58,15 @@ if [ -f "$BACKUP_DIR/state/clawdbot.json" ]; then
   echo "✅ テンプレート作成完了"
 fi
 
-# 4. システムcrontabをバックアップ
-echo "⏰ システムcrontabをバックアップ..."
-crontab -l > "$BACKUP_DIR/state/crontab.backup" 2>/dev/null || echo "# No crontab" > "$BACKUP_DIR/state/crontab.backup"
-echo "✅ システムcrontabバックアップ完了"
+# 4. システムcrontabをバックアップ（crontab利用可能な場合のみ）
+if command -v crontab &> /dev/null; then
+  echo "⏰ システムcrontabをバックアップ..."
+  crontab -l > "$BACKUP_DIR/state/crontab.backup" 2>/dev/null || echo "# No crontab" > "$BACKUP_DIR/state/crontab.backup"
+  echo "✅ システムcrontabバックアップ完了"
+else
+  echo "ℹ️  crontab コマンドが利用できません（Docker環境では正常）"
+  echo "# crontab not available" > "$BACKUP_DIR/state/crontab.backup"
+fi
 
 # 5. ホームディレクトリ設定をバックアップ
 echo "🏠 ホームディレクトリ設定をバックアップ..."

@@ -60,6 +60,7 @@ if (fs.existsSync(configPath)) {
   config.tools.exec = config.tools.exec || {};
   config.tools.exec.security = "full";
   config.tools.exec.ask = "off";
+  config.tools.exec.timeout = 3600000; // 1時間（長時間コマンド対応）
 
   // elevated 設定
   config.tools.elevated = config.tools.elevated || {};
@@ -67,14 +68,16 @@ if (fs.existsSync(configPath)) {
   config.tools.elevated.allowFrom = config.tools.elevated.allowFrom || {};
   config.tools.elevated.allowFrom.discord = ["*"];
 
-  // agents.defaults 設定
+  // agents.defaults 設定（タイムアウト延長）
   config.agents = config.agents || {};
   config.agents.defaults = config.agents.defaults || {};
   config.agents.defaults.elevatedDefault = "full";
+  config.agents.defaults.timeout = 3600000; // 1時間（エージェントタイムアウト延長）
+  config.agents.defaults.maxTurns = 100; // 最大ターン数を増やす
 
   // 出力
   fs.writeFileSync(configPath, JSON.stringify(config, null, 2));
-  console.log('✅ 自動承認設定を適用しました');
+  console.log('✅ 自動承認設定 + タイムアウト延長を適用しました');
 } else {
   console.log('⚠️  設定ファイルが見つかりません');
 }

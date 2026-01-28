@@ -71,10 +71,12 @@ if (fs.existsSync(configPath)) {
   config.agents = config.agents || {};
   config.agents.defaults = config.agents.defaults || {};
   config.agents.defaults.elevatedDefault = "full";
+  // エージェントタイムアウトを1時間（3600秒）に延長
+  config.agents.defaults.timeoutSeconds = 3600;
 
   // 出力
   fs.writeFileSync(configPath, JSON.stringify(config, null, 2));
-  console.log('✅ 自動承認設定を適用しました');
+  console.log('✅ 自動承認設定 + タイムアウト延長(1時間)を適用しました');
 } else {
   console.log('⚠️  設定ファイルが見つかりません');
 }

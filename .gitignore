@@ -69,3 +69,6 @@ USER.md
 
 # local tooling
 .serena/
+
+# Clawdbot backups (contains secrets)
+.clawdbot-backup/

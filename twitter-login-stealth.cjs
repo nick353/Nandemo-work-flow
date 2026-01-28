@@ -1,13 +1,13 @@
 const puppeteer = require('puppeteer-extra');
 const StealthPlugin = require('puppeteer-extra-plugin-stealth');
+
 puppeteer.use(StealthPlugin());
 
 (async () => {
-  console.log('Launching browser with Stealth Plugin...');
+  console.log('🚀 Starting Twitter login test with Stealth Plugin...');
   
   const browser = await puppeteer.launch({
     headless: true,
-    executablePath: '/usr/bin/chromium',
     args: [
       '--no-sandbox',
       '--disable-setuid-sandbox',
@@ -17,30 +17,34 @@ puppeteer.use(StealthPlugin());
   
   const page = await browser.newPage();
   
-  // Set realistic viewport
+  // Set viewport
   await page.setViewport({ width: 1280, height: 800 });
   
-  // Set user agent
-  await page.setUserAgent('Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/144.0.0.0 Safari/537.36');
+  console.log('📱 Navigating to Twitter login page...');
+  await page.goto('https://twitter.com/login', {
+    waitUntil: 'networkidle2',
+    timeout: 30000
+  });
   
-  console.log('Navigating to Twitter login...');
-  await page.goto('https://twitter.com/login', { waitUntil: 'networkidle2', timeout: 30000 });
+  console.log('📸 Taking screenshot...');
+  await page.screenshot({ path: '/root/clawd/twitter-login-stealth.png', fullPage: true });
   
-  console.log('Page loaded:', await page.title());
-  console.log('Current URL:', page.url());
-  
-  // Take screenshot
-  await page.screenshot({ path: '/root/clawd/twitter-login.png' });
-  console.log('Screenshot saved to: /root/clawd/twitter-login.png');
+  const title = await page.title();
+  console.log('✅ Page title:', title);
   
   // Check for error messages
-  const content = await page.content();
-  if (content.includes('Something went wrong')) {
-    console.log('❌ Twitter still detecting bot behavior');
-  } else if (content.includes('Sign in') || content.includes('Log in')) {
+  const bodyText = await page.evaluate(() => document.body.innerText);
+  
+  if (bodyText.includes('Something went wrong')) {
+    console.log('❌ Twitter detected bot behavior');
+  } else if (bodyText.includes('Sign in') || bodyText.includes('Log in')) {
     console.log('✅ Login page loaded successfully!');
+    console.log('📝 Page contains login form');
+  } else {
+    console.log('⚠️ Unexpected page content:');
+    console.log(bodyText.substring(0, 500));
   }
   
   await browser.close();
-  console.log('Browser closed.');
+  console.log('🏁 Test complete!');
 })();

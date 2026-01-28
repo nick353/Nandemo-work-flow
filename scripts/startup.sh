@@ -44,6 +44,50 @@ fi
 # 3. スクリプトに実行権限を付与
 chmod +x /app/scripts/*.sh 2>/dev/null || true
 
+# 4. 自動承認設定を適用
+echo "🔧 自動承認設定を適用中..."
+
+if [ -f "$CLAWDBOT_DIR/clawdbot.json" ] && command -v node &> /dev/null; then
+  cat > /tmp/apply-auto-approval.js << 'EOFJS'
+const fs = require('fs');
+const configPath = '/root/.clawdbot/clawdbot.json';
+
+if (fs.existsSync(configPath)) {
+  const config = JSON.parse(fs.readFileSync(configPath, 'utf8'));
+
+  // 自動承認設定を追加
+  config.tools = config.tools || {};
+  config.tools.exec = config.tools.exec || {};
+  config.tools.exec.security = "full";
+  config.tools.exec.ask = "off";
+
+  // elevated 設定
+  config.tools.elevated = config.tools.elevated || {};
+  config.tools.elevated.enabled = true;
+  config.tools.elevated.allowFrom = config.tools.elevated.allowFrom || {};
+  config.tools.elevated.allowFrom.discord = ["*"];
+
+  // agents.defaults 設定
+  config.agents = config.agents || {};
+  config.agents.defaults = config.agents.defaults || {};
+  config.agents.defaults.elevatedDefault = "full";
+
+  // 出力
+  fs.writeFileSync(configPath, JSON.stringify(config, null, 2));
+  console.log('✅ 自動承認設定を適用しました');
+} else {
+  console.log('⚠️  設定ファイルが見つかりません');
+}
+EOFJS
+
+  node /tmp/apply-auto-approval.js
+  rm /tmp/apply-auto-approval.js
+
+  echo "✅ 自動承認設定が適用されました"
+else
+  echo "ℹ️  自動承認設定をスキップ（初回起動時は正常）"
+fi
+
 echo ""
 echo "✅ VPS起動処理完了！"
 echo ""

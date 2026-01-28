@@ -156,4 +156,10 @@ else
   echo "[entrypoint] No auth config set. Set CLAWDBOT_GATEWAY_TOKEN or CLAWDBOT_NO_AUTH=true"
 fi
 
+# Run startup script if it exists (auto-restore from backup)
+if [ -f /app/scripts/startup.sh ]; then
+  echo "[entrypoint] Running startup script for auto-restore..."
+  bash /app/scripts/startup.sh || true
+fi
+
 exec node --max-old-space-size=1024 dist/index.js gateway --bind lan --port 8080 --allow-unconfigured "$@"

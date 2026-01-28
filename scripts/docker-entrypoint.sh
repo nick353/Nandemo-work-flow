@@ -11,13 +11,17 @@ if [ -n "$DISCORD_BOT_TOKEN" ]; then
   DISCORD_CONFIG='"discord": {
       "enabled": true,
       "token": "'"$DISCORD_BOT_TOKEN"'",
-      "requireMention": false,
       "dm": {
         "enabled": true,
         "policy": "open",
         "allowFrom": ["*"]
       },
-      "groupPolicy": "open"
+      "groupPolicy": "open",
+      "guilds": {
+        "*": {
+          "requireMention": false
+        }
+      }
     }'
   DISCORD_PLUGIN='"discord": { "enabled": true }'
   echo "[entrypoint] Discord channel enabled (mention not required)"

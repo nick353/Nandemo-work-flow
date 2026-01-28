@@ -26,15 +26,19 @@ else
 fi
 
 # 2. crontabが空の場合、バックアップから復元
-if ! crontab -l 2>/dev/null | grep -q "backup-config.sh"; then
-  echo "ℹ️  crontabが設定されていません（初回起動時は正常）"
+if command -v crontab &> /dev/null; then
+  if ! crontab -l 2>/dev/null | grep -q "backup-config.sh"; then
+    echo "ℹ️  crontabが設定されていません（初回起動時は正常）"
 
-  if [ -f "$BACKUP_DIR/state/crontab.backup" ]; then
-    crontab "$BACKUP_DIR/state/crontab.backup"
-    echo "✅ crontab復元完了"
+    if [ -f "$BACKUP_DIR/state/crontab.backup" ]; then
+      crontab "$BACKUP_DIR/state/crontab.backup"
+      echo "✅ crontab復元完了"
+    fi
+  else
+    echo "✅ crontabが設定されています"
   fi
 else
-  echo "✅ crontabが設定されています"
+  echo "ℹ️  crontab コマンドが利用できません（Docker環境では正常）"
 fi
 
 # 3. スクリプトに実行権限を付与

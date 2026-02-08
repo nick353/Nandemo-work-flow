@@ -1,0 +1,14 @@
+{
+  "accounts": {
+    "default": {
+      "name": "デフォルトアカウント",
+      "instagram": "",
+      "threads": "",
+      "x": "",
+      "facebook": "",
+      "pinterest": ""
+    }
+  },
+  "defaultBoard": "Animal",
+  "platforms": ["instagram", "x", "facebook", "pinterest"]
+}

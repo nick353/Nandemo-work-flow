@@ -7,6 +7,15 @@
 /root/clawd/scripts/backup-with-retry.sh
 ```
 
+## ヘルスチェック
+システムの安定性を確認します：
+
+```bash
+/root/clawd/scripts/health-check.sh
+```
+
+異常を検知した場合は、Discord（#sns-投稿）に報告してください。
+
 ### リポジトリ
 - 本家: https://github.com/nick353/Nandemo-work-flow
 - バックアップ: https://github.com/nick353/save-point

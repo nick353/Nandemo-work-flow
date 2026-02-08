@@ -10,5 +10,9 @@
     }
   },
   "defaultBoard": "Animal",
-  "platforms": ["instagram", "x", "facebook", "pinterest"]
+  "platforms": ["instagram", "x", "facebook", "pinterest"],
+  "discord": {
+    "channelId": "1470060780111007950",
+    "channelName": "sns-投稿"
+  }
 }

@@ -2,6 +2,31 @@
 
 5つのSNS（Instagram, Threads, Facebook, Pinterest, X）に画像を自動投稿するスキル。
 
+## ローカル（Mac）でテストする
+
+### 自動同期（推奨）
+
+VPSから最新版を自動ダウンロード：
+
+```bash
+# VPSから sync-to-local.sh をダウンロード
+scp root@<VPSのIP>:/root/clawd/skills/sns-multi-poster/sync-to-local.sh ~/Downloads/
+
+# 実行権限を付与
+chmod +x ~/Downloads/sync-to-local.sh
+
+# VPSのIPを設定して実行
+VPS_HOST=<VPSのIP> ~/Downloads/sync-to-local.sh
+```
+
+これで `~/.clawdbot/skills/sns-multi-poster/` に最新版が配置されます。
+
+### 手動同期
+
+```bash
+scp -r root@<VPSのIP>:/root/clawd/skills/sns-multi-poster ~/.clawdbot/skills/
+```
+
 ## 使い方
 
 ### 基本的な呼び出し

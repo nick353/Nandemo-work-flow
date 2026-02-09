@@ -1,13 +1,22 @@
 # HEARTBEAT.md - 自動タスク
 
-## 自動バックアップ
+## 1. 実行中タスクのチェック（最優先）
+**必ず最初に実行：**
+1. `process list` で実行中・完了したプロセスを確認
+2. RUNNING_TASKS.md と照合
+3. 完了したタスクがあれば：
+   - Discord（#sns-投稿）に報告
+   - RUNNING_TASKS.md を更新（「完了済み」に移動）
+4. 食い違いがあれば修正
+
+## 2. 自動バックアップ
 ハートビート時にGitHubバックアップを実行してください：
 
 ```bash
 /root/clawd/scripts/backup-with-retry.sh
 ```
 
-## ヘルスチェック
+## 3. ヘルスチェック
 システムの安定性を確認します：
 
 ```bash
@@ -15,6 +24,15 @@
 ```
 
 異常を検知した場合は、Discord（#sns-投稿）に報告してください。
+
+## 4. 会話サマリー生成（1日1回）
+前回から24時間以上経過している場合、今日の会話をサマリー化：
+
+```bash
+/root/clawd/scripts/daily-summary.sh
+```
+
+生成されたサマリーは `memory/YYYY-MM-DD.md` に保存されます。
 
 ### リポジトリ
 - 本家: https://github.com/nick353/Nandemo-work-flow

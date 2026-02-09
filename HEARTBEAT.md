@@ -34,6 +34,25 @@
 
 生成されたサマリーは `memory/YYYY-MM-DD.md` に保存されます。
 
+## 5. Clawdbot自動リサーチ（毎朝）
+最新のSkills・MCP・Tips・事例を自動収集：
+
+```bash
+/root/clawd/scripts/daily-research.sh
+```
+
+レポートは `research/YYYY-MM-DD.md` に保存され、Discord（#自己強化の間）に自動投稿されます。
+
+**リサーチ範囲:**
+- ClawdHub: 新しいSkills
+- GitHub: MCPサーバー・Clawdbot関連リポジトリ
+- X（Twitter）: コミュニティTips・事例（認証設定後）
+
+**重要度分類:**
+- 🔴 高優先度: 即導入推奨
+- 🟡 中優先度: 検討推奨
+- 🟢 低優先度: 参考情報
+
 ### リポジトリ
 - 本家: https://github.com/nick353/Nandemo-work-flow
 - バックアップ: https://github.com/nick353/save-point

@@ -1,5 +1,23 @@
 # HEARTBEAT.md - 自動タスク
 
+## 0. 毎朝リサーチの自動実行チェック
+**日本時間9:00（UTC 0:00）に自動実行：**
+```bash
+TODAY=$(date +%Y-%m-%d)
+LAST_RUN=$(cat /root/clawd/.last_research_date 2>/dev/null || echo "1970-01-01")
+
+if [ "$TODAY" != "$LAST_RUN" ]; then
+    CURRENT_HOUR=$(date +%H)
+    # UTC 0時台（日本時間9時台）にチェック
+    if [ "$CURRENT_HOUR" = "00" ] || [ "$CURRENT_HOUR" = "01" ]; then
+        echo "🔍 毎朝リサーチを開始します..."
+        . ~/.profile && /root/clawd/scripts/daily-research.sh
+        echo "$TODAY" > /root/clawd/.last_research_date
+        echo "✅ リサーチ完了"
+    fi
+fi
+```
+
 ## 1. 実行中タスクのチェック（最優先）
 **必ず最初に実行：**
 1. `process list` で実行中・完了したプロセスを確認
@@ -42,23 +60,41 @@
 生成されたサマリーは `memory/YYYY-MM-DD.md` に保存されます。
 
 ## 5. Clawdbot自動リサーチ（毎朝）
-最新のSkills・MCP・Tips・事例を自動収集：
 
-```bash
-/root/clawd/scripts/daily-research.sh
+### ⏰ スケジュール
+- 毎朝自動実行（cronジョブ）
+- レポート生成 → Discord投稿
+
+### 📋 実行内容
+1. X検索（Clawdbot/MCP/automation関連）
+2. GitHub検索（MCPサーバー・AI Agent Skills）
+3. ClawdHub検索（厳選Skillsのみ）
+4. 番号付きインストール候補リスト生成
+5. Discord投稿（#自己強化の間）
+
+### 📤 投稿フォーマット
+```
+# 🔍 毎朝Clawdbotリサーチ（YYYY-MM-DD）
+
+## 🎯 インストール候補（番号で選択）
+
+### 📦 MCPサーバー
+1. **名前** by 作者 ⭐スター数
+   - 説明
+
+### 🔧 ClawdHub Skills
+6. **名前**
+
+---
+
+💬 アップデートしたいものがあれば、番号で教えてください！
 ```
 
-レポートは `research/YYYY-MM-DD.md` に保存され、Discord（#自己強化の間）に自動投稿されます。
-
-**リサーチ範囲:**
-- ClawdHub: 新しいSkills
-- GitHub: MCPサーバー・Clawdbot関連リポジトリ
-- X（Twitter）: コミュニティTips・事例（認証設定後）
-
-**重要度分類:**
-- 🔴 高優先度: 即導入推奨
-- 🟡 中優先度: 検討推奨
-- 🟢 低優先度: 参考情報
+### 🔄 運用フロー
+1. ハートビート時：レポート生成済みか確認
+2. 生成済み → Discord投稿 → andoさんに通知
+3. andoさんが番号で指定 → インストール実行
+4. 完了報告
 
 **担当:** リッキー 🐥
 

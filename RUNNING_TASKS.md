@@ -6,6 +6,11 @@
 
 ## 完了済み
 
+- **[2026-02-09 03:47-03:48]** Google Cookieインポート ✅ 成功
+  - コマンド: `/tmp/import-cookies-v2.sh`
+  - セッションID: rapid-slug
+  - 結果: 20個のCookie設定完了、Google Sheetsログイン成功（VPS完結のWeb自動化実現）
+
 - **[2026-02-09 02:15]** Chromiumインストール
   - 作業ディレクトリ: /root/clawd
   - コマンド: `apt-get update && apt-get install -y chromium chromium-driver`

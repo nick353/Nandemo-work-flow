@@ -140,3 +140,19 @@
 - Publish: `npm publish --access public --otp="<otp>"` (run from the package dir).
 - Verify without local npmrc side effects: `npm view <pkg> version --userconfig "$(mktemp)"`.
 - Kill the tmux session after publish.
+
+## andoさん専用運用ルール（リッキー 🦜）
+**セッションハング防止のための必須ルール：**
+- **時間のかかるコマンドは実行前に必ず確認を取る**
+  - `npm install`、`pip install`、大規模ビルドなど
+  - 30秒以上かかりそうなコマンドは事前に警告して許可を得る
+- **バックグラウンド実行を優先**
+  - 長時間コマンドは `exec` の `background: true` または `yieldMs` を使用
+  - 経過報告しながら完了を待つ
+- **大きなパッケージは分割インストール**
+  - `googleapis` のような重いパッケージは一度に入れない
+  - 必要な部分だけ（例: `@googleapis/docs`）をインストール
+- **エラー時は報告して待機**
+  - コマンドが失敗・タイムアウトしたら即座に報告
+  - 勝手にリトライしない（次の指示を待つ）
+  - セッションが詰まるリスクのある操作は避ける

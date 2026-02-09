@@ -141,7 +141,7 @@
 - Verify without local npmrc side effects: `npm view <pkg> version --userconfig "$(mktemp)"`.
 - Kill the tmux session after publish.
 
-## andoさん専用運用ルール（リッキー 🦜）
+## andoさん専用運用ルール（リッキー 🐥）
 **セッションハング防止のための必須ルール：**
 - **時間のかかるコマンドは実行前に必ず確認を取る**
   - `npm install`、`pip install`、大規模ビルドなど

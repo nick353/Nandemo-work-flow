@@ -198,4 +198,4 @@ bash /root/clawd/scripts/backup-with-retry.sh
 
 ---
 
-**これで RackNerd VPS 上の Clawdbot は「止まらない」設定が完了です！** 🎉🦜
+**これで RackNerd VPS 上の Clawdbot は「止まらない」設定が完了です！** 🎉🐥

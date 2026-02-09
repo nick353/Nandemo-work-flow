@@ -83,7 +83,7 @@ if command -v gh &> /dev/null; then
     echo "" >> "$REPORT_FILE"
     
     # Clawdbot関連（最新順、10件）
-    echo "### 🦜 Clawdbot関連" >> "$REPORT_FILE"
+    echo "### 🐥 Clawdbot関連" >> "$REPORT_FILE"
     echo "" >> "$REPORT_FILE"
     gh search repos "clawdbot OR clawd" --sort updated --limit 10 --json name,owner,description,url,stargazersCount,updatedAt 2>/dev/null | \
         jq -r '.[] | "- **\(.name)** by \(.owner.login) ⭐\(.stargazersCount)\n  - \(.description // "説明なし")\n  - \(.url)\n  - 更新: \(.updatedAt | split("T")[0])\n"' \
@@ -179,6 +179,6 @@ else
 fi
 
 echo ""
-echo "🦜 リサーチ完了！"
+echo "🐥 リサーチ完了！"
 echo "📍 レポート: $REPORT_FILE"
 echo "📍 Discord: #自己強化の間"

@@ -15,9 +15,20 @@ fi
 # レポートを読み込んで整形
 REPORT_CONTENT=$(cat "$REPORT_FILE")
 
+# 警告やエラーをチェック
+WARNINGS=$(echo "$REPORT_CONTENT" | grep -c "⚠️" || echo "0")
+ERRORS=$(echo "$REPORT_FILE" | grep -c "❌" || echo "0")
+
+# ステータスメッセージ
+STATUS=""
+if [ "$WARNINGS" -gt 0 ] || [ "$ERRORS" -gt 0 ]; then
+    STATUS="⚠️ **注意:** 警告またはエラーが検出されました（警告: $WARNINGS, エラー: $ERRORS）"
+fi
+
 # Discordメッセージフォーマット（2000文字制限対応）
 MESSAGE="# 🔍 Clawdbot 自動リサーチレポート
 **日付:** $TODAY
+$STATUS
 
 ---
 
@@ -30,3 +41,6 @@ clawdbot message send \
     --message "$MESSAGE"
 
 echo "✅ Discord投稿完了: #自己強化の間"
+if [ -n "$STATUS" ]; then
+    echo "⚠️ 警告あり: レポートを確認してください"
+fi

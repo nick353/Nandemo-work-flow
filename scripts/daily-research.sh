@@ -13,79 +13,89 @@ mkdir -p "$RESEARCH_DIR"
 echo "🔍 Clawdbotリサーチ開始: $TODAY"
 
 # ============================================
-# 1. X（Twitter）検索
+# 1. X（Twitter）検索 【メイン】
 # ============================================
-echo "## 🐦 X（Twitter）検索" > "$REPORT_FILE"
+echo "## 🐦 X（Twitter）最新情報" > "$REPORT_FILE"
 echo "" >> "$REPORT_FILE"
 
-# X認証情報の確認（環境変数: BIRD_AUTH_TOKEN, BIRD_CT0）
-if [ -n "$BIRD_AUTH_TOKEN" ] && [ -n "$BIRD_CT0" ]; then
-    KEYWORDS=("Clawdbot" "clawd skill" "clawdbot MCP" "#clawdbot")
+# X認証情報の確認（環境変数: AUTH_TOKEN, CT0）
+if [ -n "$AUTH_TOKEN" ] && [ -n "$CT0" ]; then
+    # より幅広いキーワードで検索（Skills、MCP、Tips、事例、自動化）
+    KEYWORDS=("Clawdbot" "MCP server" "MCP" "automation tool" "AI automation" "workflow automation" "clawdbot skill" "#clawdbot")
 
     for keyword in "${KEYWORDS[@]}"; do
-        echo "### 検索: $keyword" >> "$REPORT_FILE"
+        echo "### 🔍 $keyword" >> "$REPORT_FILE"
         
-        # 過去24時間の投稿を検索（bird CLI使用）
-        bird search "$keyword" -n 10 --json --auth-token "$BIRD_AUTH_TOKEN" --ct0 "$BIRD_CT0" 2>/dev/null | \
-            jq -r '.tweets[]? | "- [\(.author.username)](\(.url)): \(.text | gsub("\n"; " "))"' \
-            >> "$REPORT_FILE" 2>/dev/null || echo "  - 検索結果なし" >> "$REPORT_FILE"
+        # 検索数を20件に増やして最新情報をキャッチ
+        bird search "$keyword" -n 20 --json --auth-token "$AUTH_TOKEN" --ct0 "$CT0" 2>/dev/null | \
+            jq -r '.tweets[]? | "- **[@\(.author.username)](\(.url))** (\(.createdAt | split("T")[0]))\n  > \(.text | gsub("\n"; " ") | .[0:200])...\n"' \
+            >> "$REPORT_FILE" 2>/dev/null || echo "  - 検索結果なし\n" >> "$REPORT_FILE"
         
         echo "" >> "$REPORT_FILE"
     done
 else
-    echo "- ⚠️ X認証情報が未設定（BIRD_AUTH_TOKEN, BIRD_CT0 環境変数が必要）" >> "$REPORT_FILE"
-    echo "- GitHub/ClawdHubのリサーチのみ実行中" >> "$REPORT_FILE"
+    echo "- ⚠️ X認証情報が未設定（AUTH_TOKEN, CT0 環境変数が必要）" >> "$REPORT_FILE"
+    echo "- GitHubのリサーチのみ実行中" >> "$REPORT_FILE"
     echo "" >> "$REPORT_FILE"
 fi
 
 # ============================================
-# 2. ClawdHub - 新しいSkills
+# 2. GitHub - 最新リポジトリ 【メイン】
 # ============================================
-echo "## 🔧 ClawdHub - 新しいSkills" >> "$REPORT_FILE"
+echo "---" >> "$REPORT_FILE"
+echo "" >> "$REPORT_FILE"
+echo "## 🐙 GitHub - 最新MCPサーバー＆Clawdbot関連" >> "$REPORT_FILE"
 echo "" >> "$REPORT_FILE"
 
-# キーワード検索（memory, automation, notification など）
-SKILL_KEYWORDS=("memory" "automation" "notification" "MCP" "productivity")
+if command -v gh &> /dev/null; then
+    # MCPサーバー（最新順、10件）
+    echo "### 📦 MCPサーバー" >> "$REPORT_FILE"
+    echo "" >> "$REPORT_FILE"
+    gh search repos "MCP server" --sort updated --limit 10 --json name,owner,description,url,stargazersCount,updatedAt 2>/dev/null | \
+        jq -r '.[] | "- **\(.name)** by \(.owner.login) ⭐\(.stargazersCount)\n  - \(.description // "説明なし")\n  - \(.url)\n  - 更新: \(.updatedAt | split("T")[0])\n"' \
+        >> "$REPORT_FILE" || echo "- GitHub検索エラー\n" >> "$REPORT_FILE"
+    
+    echo "" >> "$REPORT_FILE"
+    
+    # Clawdbot関連（最新順、10件）
+    echo "### 🦜 Clawdbot関連" >> "$REPORT_FILE"
+    echo "" >> "$REPORT_FILE"
+    gh search repos "clawdbot OR clawd" --sort updated --limit 10 --json name,owner,description,url,stargazersCount,updatedAt 2>/dev/null | \
+        jq -r '.[] | "- **\(.name)** by \(.owner.login) ⭐\(.stargazersCount)\n  - \(.description // "説明なし")\n  - \(.url)\n  - 更新: \(.updatedAt | split("T")[0])\n"' \
+        >> "$REPORT_FILE" || echo "- GitHub検索エラー\n" >> "$REPORT_FILE"
+    
+    echo "" >> "$REPORT_FILE"
+    
+    # AI Agent Skills（最新順、10件）
+    echo "### 🤖 AI Agent Skills" >> "$REPORT_FILE"
+    echo "" >> "$REPORT_FILE"
+    gh search repos "AI agent skill OR claude skill" --sort updated --limit 10 --json name,owner,description,url,stargazersCount,updatedAt 2>/dev/null | \
+        jq -r '.[] | "- **\(.name)** by \(.owner.login) ⭐\(.stargazersCount)\n  - \(.description // "説明なし")\n  - \(.url)\n  - 更新: \(.updatedAt | split("T")[0])\n"' \
+        >> "$REPORT_FILE" || echo "- GitHub検索エラー\n" >> "$REPORT_FILE"
+else
+    echo "- gh CLI未インストール" >> "$REPORT_FILE"
+fi
+
+echo "" >> "$REPORT_FILE"
+
+# ============================================
+# 3. ClawdHub - 補足情報
+# ============================================
+echo "---" >> "$REPORT_FILE"
+echo "" >> "$REPORT_FILE"
+echo "## 🔧 ClawdHub（補足）" >> "$REPORT_FILE"
+echo "" >> "$REPORT_FILE"
+
+# 厳選キーワードのみ（軽量化）
+SKILL_KEYWORDS=("memory" "MCP" "automation")
 
 for skill_keyword in "${SKILL_KEYWORDS[@]}"; do
-    echo "### カテゴリ: $skill_keyword" >> "$REPORT_FILE"
-    clawdhub search "$skill_keyword" --limit 3 2>/dev/null | \
-        awk '/^[a-z]/ {print "- **"$1"** "$2"\n  - "$3" "$4" "$5" "$6"\n"}' \
+    echo "### $skill_keyword" >> "$REPORT_FILE"
+    clawdhub search "$skill_keyword" --limit 2 2>/dev/null | \
+        awk '/^[a-z]/ {print "- **"$1"**"}' \
         >> "$REPORT_FILE" || echo "  - 検索結果なし" >> "$REPORT_FILE"
     echo "" >> "$REPORT_FILE"
 done
-
-echo "" >> "$REPORT_FILE"
-
-# ============================================
-# 3. GitHub - MCPサーバー
-# ============================================
-echo "## 📦 GitHub - MCPサーバー" >> "$REPORT_FILE"
-echo "" >> "$REPORT_FILE"
-
-if command -v gh &> /dev/null; then
-    gh search repos "MCP server" --limit 5 --json name,owner,description,url,stargazersCount,updatedAt 2>/dev/null | \
-        jq -r '.[] | "- **\(.name)** by \(.owner.login) ⭐\(.stargazersCount)\n  - \(.description)\n  - URL: \(.url)\n  - 更新: \(.updatedAt)\n"' \
-        >> "$REPORT_FILE" || echo "- GitHub検索エラー" >> "$REPORT_FILE"
-else
-    echo "- gh CLI未インストール" >> "$REPORT_FILE"
-fi
-
-echo "" >> "$REPORT_FILE"
-
-# ============================================
-# 4. GitHub - Clawdbot関連リポジトリ
-# ============================================
-echo "## 🐙 GitHub - Clawdbot関連" >> "$REPORT_FILE"
-echo "" >> "$REPORT_FILE"
-
-if command -v gh &> /dev/null; then
-    gh search repos "clawdbot" --limit 5 --json name,owner,description,url,stargazersCount,updatedAt 2>/dev/null | \
-        jq -r '.[] | "- **\(.name)** by \(.owner.login) ⭐\(.stargazersCount)\n  - \(.description)\n  - URL: \(.url)\n  - 更新: \(.updatedAt)\n"' \
-        >> "$REPORT_FILE" || echo "- GitHub検索エラー" >> "$REPORT_FILE"
-else
-    echo "- gh CLI未インストール" >> "$REPORT_FILE"
-fi
 
 echo "" >> "$REPORT_FILE"
 
@@ -107,7 +117,20 @@ echo "- （手動レビュー後に追加）" >> "$REPORT_FILE"
 echo "" >> "$REPORT_FILE"
 
 # ============================================
-# 6. 完了報告
+# 6. Discord投稿（別チャンネル）
 # ============================================
-echo "✅ リサーチ完了: $REPORT_FILE"
-echo "📄 レポートを確認して Discord に投稿します"
+DISCORD_CHANNEL_ID="${RESEARCH_DISCORD_CHANNEL:-1470296869870506156}"
+
+if [ -f "$REPORT_FILE" ]; then
+    echo "✅ リサーチ完了: $REPORT_FILE"
+    echo "📤 Discord (#自己強化の間) に投稿中..."
+    
+    # レポート内容をDiscordに投稿
+    clawdbot message send --target "$DISCORD_CHANNEL_ID" --message "$(cat "$REPORT_FILE")" 2>/dev/null || {
+        echo "⚠️ Discord投稿失敗（手動で確認してください）"
+    }
+    
+    echo "✅ 投稿完了"
+else
+    echo "❌ レポートファイルが見つかりません: $REPORT_FILE"
+fi

@@ -2,14 +2,24 @@
 
 ## 現在実行中
 
-- **[2026-02-09 06:30]** github-mcp-server インストール
+- **[2026-02-09 06:49]** 毎朝Clawdbotリサーチ（テスト実行）
   - 作業ディレクトリ: /root/clawd
-  - コマンド: `npm install -g @modelcontextprotocol/server-github`
-  - セッションID: plaid-glade
-  - 目的: GitHub MCP サーバーをグローバルインストール
+  - コマンド: `. ~/.profile && /root/clawd/scripts/daily-research.sh`
+  - セッションID: （確認中）
+  - 目的: X + GitHub + ClawdHub リサーチ → Discord自動投稿
   - 開始報告: 済
 
 ## 完了済み
+
+- **[2026-02-09 06:30-06:31]** github-mcp-server インストール ✅ 成功
+  - コマンド: `npm install -g @modelcontextprotocol/server-github`
+  - セッションID: plaid-glade
+  - 結果: バイナリ `/usr/local/bin/mcp-server-github` インストール完了（v2025.4.8）
+  - 注意: パッケージ deprecated 警告あり（動作は問題なし）
+
+- **[2026-02-09 06:30]** elite-longterm-memory インストール ✅ 成功
+  - コマンド: `clawdhub install elite-longterm-memory`
+  - 結果: `/root/clawd/skills/elite-longterm-memory` に配置完了
 
 - **[2026-02-09 03:47-03:48]** Google Cookieインポート ✅ 成功
   - コマンド: `/tmp/import-cookies-v2.sh`

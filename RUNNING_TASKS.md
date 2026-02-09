@@ -2,7 +2,12 @@
 
 ## 現在実行中
 
-*（なし）*
+- **[2026-02-09 06:30]** github-mcp-server インストール
+  - 作業ディレクトリ: /root/clawd
+  - コマンド: `npm install -g @modelcontextprotocol/server-github`
+  - セッションID: plaid-glade
+  - 目的: GitHub MCP サーバーをグローバルインストール
+  - 開始報告: 済
 
 ## 完了済み
 

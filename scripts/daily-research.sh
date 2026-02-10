@@ -132,11 +132,21 @@ echo "" >> "$REPORT_FILE"
 echo "## 🎯 インストール候補（番号で選択）" >> "$REPORT_FILE"
 echo "" >> "$REPORT_FILE"
 
-# GitHub MCPサーバーから番号付きリスト生成
+# GitHub MCPサーバーから番号付きリスト生成（導入効果付き）
 echo "### 📦 MCPサーバー" >> "$REPORT_FILE"
 if command -v gh &> /dev/null; then
     gh search repos "MCP server" --sort updated --limit 5 --json name,owner,description,stargazersCount 2>/dev/null | \
-        jq -r 'to_entries | .[] | "\(.key + 1). **\(.value.name)** by \(.value.owner.login) ⭐\(.value.stargazersCount)\n   - \(.value.description // "説明なし")\n"' \
+        jq -r 'to_entries | .[] | 
+            "\(.key + 1). **\(.value.name)** by \(.value.owner.login) ⭐\(.value.stargazersCount)\n" +
+            "   📝 \(.value.description // "説明なし")\n" +
+            "   ✨ **導入すると:** " + 
+            (if (.value.description // "") | test("PDF|document|extract"; "i") then "文書から自動でデータ抽出できる"
+             elif (.value.description // "") | test("Mattermost|chat|message"; "i") then "チャットツールをAIから操作できる"
+             elif (.value.description // "") | test("Android|mobile|accessibility"; "i") then "スマホアプリをAIで自動操作できる"
+             elif (.value.description // "") | test("icon|image|visual"; "i") then "アイコン・画像リソースに簡単アクセスできる"
+             elif (.value.description // "") | test("manage|CLI|install"; "i") then "MCPサーバーの管理が簡単になる"
+             elif (.value.description // "") | test("spatial|data|analyze"; "i") then "専門データを自然言語で分析できる"
+             else "新しいツール連携が可能になる" end) + "\n"' \
         >> "$REPORT_FILE" || echo "- 検索エラー\n" >> "$REPORT_FILE"
 else
     echo "- gh CLI未インストール\n" >> "$REPORT_FILE"
@@ -144,15 +154,31 @@ fi
 
 echo "" >> "$REPORT_FILE"
 
-# ClawdHub Skillsから番号付きリスト生成
+# ClawdHub Skillsから番号付きリスト生成（導入効果付き）
 echo "### 🔧 ClawdHub Skills" >> "$REPORT_FILE"
-SKILL_KEYWORDS=("memory" "MCP" "automation")
 SKILL_COUNT=6
-for skill_keyword in "${SKILL_KEYWORDS[@]}"; do
-    clawdhub search "$skill_keyword" --limit 2 2>/dev/null | \
-        awk -v num=$SKILL_COUNT '/^[a-z]/ {print num". **"$1"**"; num++}' \
-        >> "$REPORT_FILE" || echo "- 検索結果なし" >> "$REPORT_FILE"
-done
+
+# memory系
+echo "6. **elite-longterm-memory** (既にインストール済み ✅)" >> "$REPORT_FILE"
+echo "   ✨ **導入すると:** 会話履歴を永続化・検索できる" >> "$REPORT_FILE"
+echo "" >> "$REPORT_FILE"
+SKILL_COUNT=7
+
+clawdhub search "memory" --limit 1 2>/dev/null | \
+    awk -v num=$SKILL_COUNT '/^[a-z]/ && !/elite-longterm/ {print num". **"$1"**\n   ✨ **導入すると:** メモリ管理が最適化される"; num++}' \
+    >> "$REPORT_FILE" 2>/dev/null || true
+SKILL_COUNT=$((SKILL_COUNT + 1))
+
+# MCP系
+clawdhub search "MCP" --limit 2 2>/dev/null | \
+    awk -v num=$SKILL_COUNT '/^[a-z]/ {print num". **"$1"**\n   ✨ **導入すると:** MCP統合が強化される"; num++}' \
+    >> "$REPORT_FILE" 2>/dev/null || true
+SKILL_COUNT=$((SKILL_COUNT + 2))
+
+# automation系
+clawdhub search "automation" --limit 2 2>/dev/null | \
+    awk -v num=$SKILL_COUNT '/^[a-z]/ {print num". **"$1"**\n   ✨ **導入すると:** ワークフロー自動化が進む"; num++}' \
+    >> "$REPORT_FILE" 2>/dev/null || true
 
 echo "" >> "$REPORT_FILE"
 echo "---" >> "$REPORT_FILE"

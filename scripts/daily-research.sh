@@ -230,6 +230,106 @@ echo "📄 **詳細レポート:** \`$REPORT_FILE\`" >> "$REPORT_FILE"
 echo "✅ レポート生成完了: $REPORT_FILE"
 
 # ============================================
+# 5. Discord投稿用の要約版を生成
+# ============================================
+DISCORD_FILE="$TEMP_DIR/discord_post.md"
+
+cat > "$DISCORD_FILE" << 'HEADER'
+# 🔥 今日の話題（前日の注目ツール）
+
+前日に話題になったMCPサーバー・ツールを厳選5件ピックアップっぴ！ 🦜
+
+---
+
+HEADER
+
+# トップ5をDiscord投稿用にフォーマット
+COUNTER=1
+echo "$TOP5_JSON" | jq -c '.[]' | while read -r item; do
+    NAME=$(echo "$item" | jq -r '.name')
+    OWNER=$(echo "$item" | jq -r '.owner.login')
+    STARS=$(echo "$item" | jq -r '.stargazersCount')
+    DESC=$(echo "$item" | jq -r '.description // "説明なし"')
+    URL=$(echo "$item" | jq -r '.url')
+    MENTIONS=$(echo "$item" | jq -r '.x_mentions')
+    SCORE=$(echo "$item" | jq -r '.score')
+    
+    # 話題度判定
+    if [ "$MENTIONS" -ge 3 ]; then
+        TREND="🔥 話題度: 高（X言及 ${MENTIONS}件）"
+    else
+        TREND="📊 注目度: 中"
+    fi
+    
+    # どうなる？を生成
+    CLAWDBOT_IMPACT=""
+    case "$NAME" in
+        *"context7"*)
+            CLAWDBOT_IMPACT="最新コードドキュメントをLLMとAIエディタに自動提供。コード補完・提案の精度が劇的に向上"
+            ;;
+        *"fastmcp"*|*"fast-mcp"*)
+            CLAWDBOT_IMPACT="Pythonスクリプトを書くだけで新しいMCPサーバーを簡単に追加できる。手動作業が大幅効率化"
+            ;;
+        *"activepieces"*)
+            CLAWDBOT_IMPACT="複数ツール連携自動化が可能に。例: リサーチ結果→Slack/Discord/Notionに同時投稿"
+            ;;
+        *"genai-toolbox"*|*"mcp-toolbox"*)
+            CLAWDBOT_IMPACT="データベースへの自然言語クエリが可能に。「昨日のリサーチ結果を検索して」でDB直接操作"
+            ;;
+        *"kreuzberg"*)
+            CLAWDBOT_IMPACT="PDF/Office/画像など75種類以上の文書から自動でテキスト・メタデータ抽出。議事録→要約、請求書OCR→DB化が可能に"
+            ;;
+        *"playwright"*|*"browser"*)
+            CLAWDBOT_IMPACT="ブラウザ操作がより高度に。JavaScript実行、スクリーンショット、PDF生成など複雑なWeb自動化が可能"
+            ;;
+        *"github"*|*"git"*)
+            CLAWDBOT_IMPACT="GitHubの操作が自動化可能に。「このリポジトリの最新コミットを確認」「PRを作成」がチャットから直接できる"
+            ;;
+        *)
+            CLAWDBOT_IMPACT="$DESC"
+            ;;
+    esac
+    
+    cat >> "$DISCORD_FILE" << ITEM
+
+## $COUNTER. **$NAME** by $OWNER
+
+**⭐ $(printf "%'d" $STARS)** | $TREND
+
+**どうなる？**  
+$CLAWDBOT_IMPACT
+
+ITEM
+    
+    # X言及があれば抜粋表示（2件のみ、短縮版）
+    if [ "$X_ENABLED" = true ] && [ "$MENTIONS" -gt 0 ]; then
+        echo "**Xでの声:**" >> "$DISCORD_FILE"
+        bird search "$NAME" -n 2 --json --auth-token "$AUTH_TOKEN" --ct0 "$CT0" 2>/dev/null | \
+            jq -r '.[0:2] | .[] | "- @\(.author.username): \"\(.text | gsub("\n"; " ") | .[0:80])...\"" ' \
+            >> "$DISCORD_FILE" 2>/dev/null || echo "- （取得失敗）" >> "$DISCORD_FILE"
+        echo "" >> "$DISCORD_FILE"
+    fi
+    
+    # 参考URLを追加
+    echo "**参考URL:** $URL" >> "$DISCORD_FILE"
+    
+    cat >> "$DISCORD_FILE" << FOOTER
+
+**💬 やってみますか？**
+
+---
+
+FOOTER
+    
+    COUNTER=$((COUNTER + 1))
+done
+
+echo "" >> "$DISCORD_FILE"
+echo "📄 詳細: \`$REPORT_FILE\`" >> "$DISCORD_FILE"
+
+echo "📤 Discord投稿用ファイル生成完了: $DISCORD_FILE"
+
+# ============================================
 # 5. 強制Discord通知（完了報告）
 # ============================================
 DISCORD_CHANNEL_ID="${RESEARCH_DISCORD_CHANNEL:-1470296869870506156}"

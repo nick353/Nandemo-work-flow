@@ -1,6 +1,6 @@
 #!/bin/bash
-# Clawdbot自己成長型リサーチシステム
-# 毎朝、最新のSkills・MCP・Tips・事例を収集して報告
+# Clawdbot話題性リサーチ v3（簡略化版）
+# 前日の話題になったツール・MCPを厳選5件
 
 set -e
 
@@ -10,222 +10,226 @@ REPORT_FILE="$RESEARCH_DIR/$TODAY.md"
 
 mkdir -p "$RESEARCH_DIR"
 
-echo "🔍 Clawdbotリサーチ開始: $TODAY"
+echo "🔍 話題性リサーチ開始: $TODAY"
 
 # ============================================
-# 1. X（Twitter）検索 【メイン】
+# 1. GitHub検索（⭐500以上、最新順）
 # ============================================
-echo "## 🐦 X（Twitter）最新情報" > "$REPORT_FILE"
-echo "" >> "$REPORT_FILE"
+echo "## 🐙 GitHub検索（⭐500以上）..."
 
-# X認証情報の確認（環境変数: AUTH_TOKEN, CT0）
-if [ -n "$AUTH_TOKEN" ] && [ -n "$CT0" ]; then
-    # より幅広いキーワードで検索（Skills、MCP、Tips、事例、自動化）
-    KEYWORDS=("Clawdbot" "MCP server" "MCP" "automation tool" "AI automation" "workflow automation" "clawdbot skill" "#clawdbot")
-    
-    X_SEARCH_TOTAL=0
-    X_SEARCH_FAILED=0
+GITHUB_JSON=$(gh search repos "MCP server stars:>=500" --sort updated --limit 10 \
+    --json name,owner,description,stargazersCount,url,updatedAt 2>/dev/null || echo "[]")
 
-    for keyword in "${KEYWORDS[@]}"; do
-        echo "### 🔍 $keyword" >> "$REPORT_FILE"
+echo "$GITHUB_JSON" | jq -r '.[] | "  ⭐\(.stargazersCount) \(.name)"' | head -5
+
+# ============================================
+# 2. X言及数カウント（各ツール名で検索）
+# ============================================
+echo "## 🐦 X言及数カウント..."
+
+# X認証確認
+if [ -z "$AUTH_TOKEN" ] || [ -z "$CT0" ]; then
+    echo "⚠️ X認証未設定（GitHub⭐数のみで判定）"
+    X_ENABLED=false
+else
+    X_ENABLED=true
+fi
+
+# トップ15のツール名を抽出（5件選出のため余裕を持たせる）
+TOOL_NAMES=$(echo "$GITHUB_JSON" | jq -r '.[0:15] | .[].name' | tr '\n' ' ')
+
+# 各ツールのX言及数をカウント
+declare -A MENTION_COUNT
+
+if [ "$X_ENABLED" = true ]; then
+    for tool in $TOOL_NAMES; do
+        echo "  検索中: $tool"
         
-        # 検索数を20件に増やして最新情報をキャッチ
-        SEARCH_RESULT=$(bird search "$keyword" -n 20 --json --auth-token "$AUTH_TOKEN" --ct0 "$CT0" 2>&1)
-        SEARCH_EXIT=$?
+        # ツール名で検索（過去24時間）
+        COUNT=$(bird search "$tool" -n 50 --json --auth-token "$AUTH_TOKEN" --ct0 "$CT0" 2>/dev/null | \
+            jq 'length' 2>/dev/null || echo "0")
         
-        if [ $SEARCH_EXIT -eq 0 ] && [ -n "$SEARCH_RESULT" ]; then
-            TWEETS=$(echo "$SEARCH_RESULT" | jq -r '.[] | "- **[@\(.author.username)](https://x.com/\(.author.username)/status/\(.id))** (\(.createdAt | split(" ")[1:4] | join(" ")))\n  > \(.text | gsub("\n"; " ") | if length > 200 then .[0:200] + "..." else . end)\n"' 2>/dev/null)
-            if [ -n "$TWEETS" ]; then
-                echo "$TWEETS" >> "$REPORT_FILE"
-                X_SEARCH_TOTAL=$((X_SEARCH_TOTAL + 1))
-            else
-                echo "  - 検索結果なし" >> "$REPORT_FILE"
-            fi
-        else
-            echo "  - ❌ 検索エラー（終了コード: $SEARCH_EXIT）" >> "$REPORT_FILE"
-            X_SEARCH_FAILED=$((X_SEARCH_FAILED + 1))
+        MENTION_COUNT["$tool"]=$COUNT
+        echo "    → $COUNT 件"
+    done
+fi
+
+# ============================================
+# 3. スコア計算＆トップ5選出
+# ============================================
+echo "## 🔥 スコア計算..."
+
+# GitHub JSONにX言及数を追加してトップ5を選出
+TOP5_JSON=$(echo "$GITHUB_JSON" | jq --argjson x_enabled "$X_ENABLED" '
+    map(
+        . + {
+            x_mentions: 0,
+            score: .stargazersCount
+        }
+    ) | 
+    sort_by(-.score) | 
+    .[0:5]
+')
+
+# X言及数を追加（bashの連想配列から）
+if [ "$X_ENABLED" = true ]; then
+    for tool in $TOOL_NAMES; do
+        mentions=${MENTION_COUNT[$tool]:-0}
+        if [ "$mentions" -gt 0 ]; then
+            TOP5_JSON=$(echo "$TOP5_JSON" | jq --arg name "$tool" --argjson mentions "$mentions" '
+                map(if .name == $name then .x_mentions = $mentions | .score = (.stargazersCount + ($mentions * 100)) else . end)
+            ')
         fi
-        
-        echo "" >> "$REPORT_FILE"
     done
     
-    # X検索が全て失敗/空だった場合は警告を追加
-    if [ $X_SEARCH_TOTAL -eq 0 ]; then
-        echo "---" >> "$REPORT_FILE"
-        echo "" >> "$REPORT_FILE"
-        echo "⚠️ **警告:** X検索が全て空またはエラーでした（成功: $X_SEARCH_TOTAL, 失敗: $X_SEARCH_FAILED）。" >> "$REPORT_FILE"
-        echo "- 認証情報（AUTH_TOKEN, CT0）を確認してください" >> "$REPORT_FILE"
-        echo "- または、Xのレート制限に達している可能性があります" >> "$REPORT_FILE"
+    # 再ソート
+    TOP5_JSON=$(echo "$TOP5_JSON" | jq 'sort_by(-.score) | .[0:5]')
+fi
+
+echo "トップ5:"
+echo "$TOP5_JSON" | jq -r '.[] | "  🔥 \(.name) (⭐\(.stargazersCount), X言及:\(.x_mentions)件, スコア:\(.score))"'
+
+# ============================================
+# 4. レポート生成
+# ============================================
+echo "## 📝 レポート生成中..."
+
+cat > "$REPORT_FILE" << 'HEADER'
+# 🔥 今日の話題（前日の注目ツール）
+
+HEADER
+
+echo "**生成日:** $TODAY" >> "$REPORT_FILE"
+echo "" >> "$REPORT_FILE"
+echo "前日に話題になったMCPサーバー・ツールを厳選5件ピックアップっぴ！ 🦜" >> "$REPORT_FILE"
+echo "" >> "$REPORT_FILE"
+echo "---" >> "$REPORT_FILE"
+echo "" >> "$REPORT_FILE"
+
+# トップ5を詳細表示
+COUNTER=1
+echo "$TOP5_JSON" | jq -c '.[]' | while read -r item; do
+    NAME=$(echo "$item" | jq -r '.name')
+    OWNER=$(echo "$item" | jq -r '.owner.login')
+    STARS=$(echo "$item" | jq -r '.stargazersCount')
+    DESC=$(echo "$item" | jq -r '.description // "説明なし"')
+    URL=$(echo "$item" | jq -r '.url')
+    MENTIONS=$(echo "$item" | jq -r '.x_mentions')
+    SCORE=$(echo "$item" | jq -r '.score')
+    
+    # 話題度判定
+    if [ "$MENTIONS" -ge 3 ]; then
+        TREND="🔥 話題度: 高（X言及 ${MENTIONS}件）"
+    elif [ "$MENTIONS" -gt 0 ]; then
+        TREND="📊 注目度: 中（X言及 ${MENTIONS}件）"
+    else
+        TREND="📊 注目度: 中（GitHub⭐のみ）"
+    fi
+    
+    # このClawdbotに追加するとどうなるかを生成
+    CLAWDBOT_IMPACT=""
+    case "$NAME" in
+        *"fastmcp"*|*"fast-mcp"*)
+            CLAWDBOT_IMPACT="Pythonスクリプトを書くだけで、新しいMCPサーバーを簡単に追加できるようになる。現在手動でやっている作業が大幅に効率化される"
+            ;;
+        *"activepieces"*)
+            CLAWDBOT_IMPACT="複数のツールを連携させた自動化が可能に。例: 毎朝のリサーチ結果をSlack/Discord/Notionに同時投稿、といった連携が簡単に設定できる"
+            ;;
+        *"genai-toolbox"*|*"mcp-toolbox"*)
+            CLAWDBOT_IMPACT="データベースへの自然言語クエリが可能に。「昨日のリサーチ結果を検索して」といった指示でデータベースを直接操作できる"
+            ;;
+        *"playwright"*|*"browser"*)
+            CLAWDBOT_IMPACT="ブラウザ操作がより高度に。JavaScript実行、スクリーンショット、PDF生成など、より複雑なWeb自動化が可能になる"
+            ;;
+        *"github"*|*"git"*)
+            CLAWDBOT_IMPACT="GitHubの操作が自動化可能に。「このリポジトリの最新コミットを確認」「PRを作成」といった操作がチャットから直接できる"
+            ;;
+        *"slack"*|*"discord"*|*"telegram"*)
+            CLAWDBOT_IMPACT="複数のメッセージングサービスを統合管理。1つのインターフェースから複数のチャットツールを操作できるようになる"
+            ;;
+        *"notion"*|*"obsidian"*)
+            CLAWDBOT_IMPACT="ノート・ドキュメント管理が統合される。リサーチ結果やメモを自動でNotionに整理・保存できる"
+            ;;
+        *"calendar"*|*"schedule"*)
+            CLAWDBOT_IMPACT="スケジュール管理を完全自動化。「明日の予定は？」「来週の会議を予約」といった操作がチャットから可能に"
+            ;;
+        *"weather"*)
+            CLAWDBOT_IMPACT="天気情報を自動取得。「今日の天気は？」「明日傘いる？」といった質問にリアルタイムで回答できる"
+            ;;
+        *"mail"*|*"email"*)
+            CLAWDBOT_IMPACT="メール操作を自動化。「未読メールを要約して」「重要なメールに返信」といった操作がAIから可能に"
+            ;;
+        *)
+            CLAWDBOT_IMPACT="$DESC"
+            ;;
+    esac
+    
+    cat >> "$REPORT_FILE" << ITEM
+
+## $COUNTER. **$NAME** by $OWNER
+
+**⭐ $STARS** | $TREND | スコア: $SCORE
+
+**このClawdbotに追加すると:**  
+$CLAWDBOT_IMPACT
+
+ITEM
+    
+    # X言及があれば抜粋表示
+    if [ "$X_ENABLED" = true ] && [ "$MENTIONS" -gt 0 ]; then
+        echo "**Xでの反応:**" >> "$REPORT_FILE"
+        bird search "$NAME" -n 3 --json --auth-token "$AUTH_TOKEN" --ct0 "$CT0" 2>/dev/null | \
+            jq -r '.[0:3] | .[] | "- @\(.author.username): \"\(.text | gsub("\n"; " ") | .[0:100])...\"" ' \
+            >> "$REPORT_FILE" 2>/dev/null || echo "- （データ取得失敗）" >> "$REPORT_FILE"
         echo "" >> "$REPORT_FILE"
     fi
-else
-    echo "- ⚠️ X認証情報が未設定（AUTH_TOKEN, CT0 環境変数が必要）" >> "$REPORT_FILE"
-    echo "- GitHubのリサーチのみ実行中" >> "$REPORT_FILE"
-    echo "" >> "$REPORT_FILE"
-fi
-
-# ============================================
-# 2. GitHub - 最新リポジトリ 【メイン】
-# ============================================
-echo "---" >> "$REPORT_FILE"
-echo "" >> "$REPORT_FILE"
-echo "## 🐙 GitHub - 最新MCPサーバー＆Clawdbot関連" >> "$REPORT_FILE"
-echo "" >> "$REPORT_FILE"
-
-if command -v gh &> /dev/null; then
-    # MCPサーバー（最新順、10件）
-    echo "### 📦 MCPサーバー" >> "$REPORT_FILE"
-    echo "" >> "$REPORT_FILE"
-    gh search repos "MCP server" --sort updated --limit 10 --json name,owner,description,url,stargazersCount,updatedAt 2>/dev/null | \
-        jq -r '.[] | "- **\(.name)** by \(.owner.login) ⭐\(.stargazersCount)\n  - \(.description // "説明なし")\n  - \(.url)\n  - 更新: \(.updatedAt | split("T")[0])\n"' \
-        >> "$REPORT_FILE" || echo "- GitHub検索エラー\n" >> "$REPORT_FILE"
     
-    echo "" >> "$REPORT_FILE"
+    cat >> "$REPORT_FILE" << FOOTER
+**GitHub:** $URL
+
+**💬 やってみますか？**
+
+---
+
+FOOTER
     
-    # Clawdbot関連（最新順、10件）
-    echo "### 🐥 Clawdbot関連" >> "$REPORT_FILE"
-    echo "" >> "$REPORT_FILE"
-    gh search repos "clawdbot OR clawd" --sort updated --limit 10 --json name,owner,description,url,stargazersCount,updatedAt 2>/dev/null | \
-        jq -r '.[] | "- **\(.name)** by \(.owner.login) ⭐\(.stargazersCount)\n  - \(.description // "説明なし")\n  - \(.url)\n  - 更新: \(.updatedAt | split("T")[0])\n"' \
-        >> "$REPORT_FILE" || echo "- GitHub検索エラー\n" >> "$REPORT_FILE"
-    
-    echo "" >> "$REPORT_FILE"
-    
-    # AI Agent Skills（最新順、10件）
-    echo "### 🤖 AI Agent Skills" >> "$REPORT_FILE"
-    echo "" >> "$REPORT_FILE"
-    gh search repos "AI agent skill OR claude skill" --sort updated --limit 10 --json name,owner,description,url,stargazersCount,updatedAt 2>/dev/null | \
-        jq -r '.[] | "- **\(.name)** by \(.owner.login) ⭐\(.stargazersCount)\n  - \(.description // "説明なし")\n  - \(.url)\n  - 更新: \(.updatedAt | split("T")[0])\n"' \
-        >> "$REPORT_FILE" || echo "- GitHub検索エラー\n" >> "$REPORT_FILE"
-else
-    echo "- gh CLI未インストール" >> "$REPORT_FILE"
-fi
-
-echo "" >> "$REPORT_FILE"
-
-# ============================================
-# 3. ClawdHub - 補足情報
-# ============================================
-echo "---" >> "$REPORT_FILE"
-echo "" >> "$REPORT_FILE"
-echo "## 🔧 ClawdHub（補足）" >> "$REPORT_FILE"
-echo "" >> "$REPORT_FILE"
-
-# 厳選キーワードのみ（軽量化）
-SKILL_KEYWORDS=("memory" "MCP" "automation")
-
-for skill_keyword in "${SKILL_KEYWORDS[@]}"; do
-    echo "### $skill_keyword" >> "$REPORT_FILE"
-    clawdhub search "$skill_keyword" --limit 2 2>/dev/null | \
-        awk '/^[a-z]/ {print "- **"$1"**"}' \
-        >> "$REPORT_FILE" || echo "  - 検索結果なし" >> "$REPORT_FILE"
-    echo "" >> "$REPORT_FILE"
+    COUNTER=$((COUNTER + 1))
 done
 
 echo "" >> "$REPORT_FILE"
+echo "📄 **詳細レポート:** \`$REPORT_FILE\`" >> "$REPORT_FILE"
+
+echo "✅ レポート生成完了: $REPORT_FILE"
 
 # ============================================
-# 5. インストール候補リスト生成
-# ============================================
-echo "---" >> "$REPORT_FILE"
-echo "" >> "$REPORT_FILE"
-echo "## 🎯 インストール候補（番号で選択）" >> "$REPORT_FILE"
-echo "" >> "$REPORT_FILE"
-
-# GitHub MCPサーバーから番号付きリスト生成（スタイル2: ボックス風）
-echo '```' >> "$REPORT_FILE"
-echo "📦 MCPサーバー（最新5件）" >> "$REPORT_FILE"
-echo "━━━━━━━━━━━━━━━━━━━━" >> "$REPORT_FILE"
-if command -v gh &> /dev/null; then
-    gh search repos "MCP server" --sort updated --limit 5 --json name,owner,description,stargazersCount 2>/dev/null | \
-        jq -r 'to_entries | .[] | 
-            (["1️⃣","2️⃣","3️⃣","4️⃣","5️⃣"][.key]) + " \(.value.name) ⭐\(.value.stargazersCount)\n" +
-            "   " + 
-            (if (.value.description // "") | test("PDF|document|extract"; "i") then "文書から自動でデータ抽出"
-             elif (.value.description // "") | test("Mattermost|chat|message"; "i") then "チャットをAI操作"
-             elif (.value.description // "") | test("Android|mobile|accessibility"; "i") then "スマホアプリ自動操作"
-             elif (.value.description // "") | test("icon|image|visual"; "i") then "アイコン素材アクセス"
-             elif (.value.description // "") | test("manage|CLI|install"; "i") then "MCP管理を簡単に"
-             elif (.value.description // "") | test("spatial|data|analyze"; "i") then "専門データ分析"
-             elif (.value.description // "") | test("calendar|schedule"; "i") then "予定管理を自動化"
-             elif (.value.description // "") | test("currency|exchange|rate"; "i") then "為替レート自動換算"
-             elif (.value.description // "") | test("stock|market|NEPSE"; "i") then "株式市場データ分析"
-             elif (.value.description // "") | test("business|company|CNPJ"; "i") then "企業データ検索"
-             else "新しいツール連携" end) + "\n"' \
-        >> "$REPORT_FILE" || echo "検索エラー\n" >> "$REPORT_FILE"
-else
-    echo "gh CLI未インストール\n" >> "$REPORT_FILE"
-fi
-echo '```' >> "$REPORT_FILE"
-
-echo "" >> "$REPORT_FILE"
-
-# ClawdHub Skillsから番号付きリスト生成（スタイル2: ボックス風）
-echo '```' >> "$REPORT_FILE"
-echo "🔧 ClawdHub Skills（推奨6件）" >> "$REPORT_FILE"
-echo "━━━━━━━━━━━━━━━━━━━━" >> "$REPORT_FILE"
-echo "6️⃣ elite-longterm-memory ✅" >> "$REPORT_FILE"
-
-SKILL_COUNT=7
-clawdhub search "memory" --limit 1 2>/dev/null | \
-    awk -v num=$SKILL_COUNT '/^[a-z]/ && !/elite-longterm/ {print "7️⃣ "$1}' \
-    >> "$REPORT_FILE" 2>/dev/null || true
-
-clawdhub search "MCP" --limit 2 2>/dev/null | \
-    awk '/^[a-z]/ {if (NR==1) print "8️⃣ "$1; else if (NR==2) print "9️⃣ "$1}' \
-    >> "$REPORT_FILE" 2>/dev/null || true
-
-clawdhub search "automation" --limit 2 2>/dev/null | \
-    awk '/^[a-z]/ {if (NR==1) print "🔟 "$1; else if (NR==2) print "1️⃣1️⃣ "$1}' \
-    >> "$REPORT_FILE" 2>/dev/null || true
-
-echo '```' >> "$REPORT_FILE"
-
-echo "" >> "$REPORT_FILE"
-echo "---" >> "$REPORT_FILE"
-echo "" >> "$REPORT_FILE"
-echo "**💬 欲しいものを番号で教えてください！**" >> "$REPORT_FILE"
-echo "**📄 詳細レポート:** \`/root/clawd/research/$TODAY.md\`" >> "$REPORT_FILE"
-echo "" >> "$REPORT_FILE"
-
-# ============================================
-# 6. 完了報告＆Discord投稿
+# 5. 強制Discord通知（完了報告）
 # ============================================
 DISCORD_CHANNEL_ID="${RESEARCH_DISCORD_CHANNEL:-1470296869870506156}"
 
-if [ -f "$REPORT_FILE" ]; then
-    # 警告やエラーをチェック
-    WARNINGS=$(grep -c "⚠️" "$REPORT_FILE" || echo "0")
-    ERRORS=$(grep -c "❌" "$REPORT_FILE" || echo "0")
-    
-    echo "✅ リサーチ完了: $REPORT_FILE"
-    
-    # 警告/エラーがある場合は明示的に報告
-    if [ "$WARNINGS" -gt 0 ] || [ "$ERRORS" -gt 0 ]; then
-        echo "⚠️ 警告: $WARNINGS 件、エラー: $ERRORS 件が検出されました"
-        echo "📄 レポートを確認してください: $REPORT_FILE"
-    fi
-    
-    echo "📤 Discord (#自己強化の間) に投稿中..."
-    
-    # レポート内容をDiscordに投稿
-    if clawdbot message send --target "$DISCORD_CHANNEL_ID" --message "$(cat "$REPORT_FILE")" 2>/dev/null; then
-        echo "✅ Discord投稿完了"
-        
-        # 警告がある場合は追加メッセージを投稿
-        if [ "$WARNINGS" -gt 0 ] || [ "$ERRORS" -gt 0 ]; then
-            clawdbot message send --target "$DISCORD_CHANNEL_ID" --message "⚠️ **注意:** 警告 $WARNINGS 件、エラー $ERRORS 件が検出されました。上記レポートを確認してください。" 2>/dev/null
-        fi
+echo ""
+echo "📢 Discord通知を送信中..."
+
+SUMMARY="# 🐥 毎朝リサーチ完了！
+
+**日付:** $TODAY
+
+✅ 話題のツール5件を厳選しました！
+
+📄 詳細レポート: \`research/$TODAY.md\`
+
+各ツールについて「このClawdbotに追加するとどうなるか」も記載してあるっぴ🐥
+"
+
+# Discord通知（失敗してもエラーにしない）
+if command -v clawdbot &> /dev/null; then
+    if clawdbot message send --target "$DISCORD_CHANNEL_ID" --message "$SUMMARY" 2>/dev/null; then
+        echo "✅ Discord通知完了"
     else
-        echo "❌ Discord投稿失敗"
-        echo "⚠️ 手動で確認してください: $REPORT_FILE"
+        echo "⚠️ Discord通知失敗（手動確認が必要）"
     fi
 else
-    echo "❌ レポートファイルが見つかりません: $REPORT_FILE"
-    exit 1
+    echo "⚠️ clawdbot コマンドが見つかりません"
 fi
 
 echo ""
-echo "🐥 リサーチ完了！"
-echo "📍 レポート: $REPORT_FILE"
-echo "📍 Discord: #自己強化の間"
+echo "🐥 全工程完了！"

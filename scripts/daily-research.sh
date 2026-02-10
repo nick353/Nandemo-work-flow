@@ -170,8 +170,10 @@ echo "$TOP5_JSON" | jq -c '.[]' | while read -r item; do
 
 **⭐ $STARS** | $TREND | スコア: $SCORE
 
-**このClawdbotに追加すると:**  
+**どうなる？**  
 $CLAWDBOT_IMPACT
+
+**GitHub:** $URL
 
 ITEM
     
@@ -184,8 +186,34 @@ ITEM
         echo "" >> "$REPORT_FILE"
     fi
     
+    # 参考URLを追加（公式ドキュメント・デモサイトなど）
+    echo "**参考URL:**" >> "$REPORT_FILE"
+    
+    # よく知られたツールの公式リンクを追加
+    case "$NAME" in
+        *"fastmcp"*)
+            echo "- 📖 ドキュメント: https://fastmcp.dev" >> "$REPORT_FILE"
+            ;;
+        *"activepieces"*)
+            echo "- 📖 ドキュメント: https://www.activepieces.com/docs" >> "$REPORT_FILE"
+            echo "- 🎮 デモ: https://cloud.activepieces.com" >> "$REPORT_FILE"
+            ;;
+        *"genai-toolbox"*)
+            echo "- 📖 ドキュメント: https://googleapis.github.io/genai-toolbox/" >> "$REPORT_FILE"
+            ;;
+        *"playwright"*)
+            echo "- 📖 ドキュメント: https://playwright.dev" >> "$REPORT_FILE"
+            ;;
+        *"github"*)
+            echo "- 📖 GitHub MCP: https://github.com/modelcontextprotocol" >> "$REPORT_FILE"
+            ;;
+        *)
+            # GitHubのREADMEリンク
+            echo "- 📖 README: $URL#readme" >> "$REPORT_FILE"
+            ;;
+    esac
+    
     cat >> "$REPORT_FILE" << FOOTER
-**GitHub:** $URL
 
 **💬 やってみますか？**
 

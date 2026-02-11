@@ -13,7 +13,53 @@ mkdir -p "$RESEARCH_DIR"
 echo "🔍 話題性リサーチ開始: $TODAY"
 
 # ============================================
-# 1. GitHub検索（⭐500以上、複数キーワード）
+# 1. 今日のAIトレンド（X検索）
+# ============================================
+echo "## 📰 今日のAIトレンド検索中..."
+
+TREND_FILE="$TEMP_DIR/ai_trends.txt"
+> "$TREND_FILE"
+
+# X認証確認
+if [ -z "$AUTH_TOKEN" ] || [ -z "$CT0" ]; then
+    echo "⚠️ X認証未設定（トレンド検索スキップ）"
+    X_ENABLED=false
+else
+    X_ENABLED=true
+    
+    # AIトレンド検索キーワード
+    TREND_KEYWORDS=(
+        "new AI tool"
+        "AI release"
+        "video generation"
+        "Sora"
+        "image generation"
+        "GPT"
+        "Claude"
+        "Gemini"
+        "動画生成"
+        "画像生成"
+    )
+    
+    for keyword in "${TREND_KEYWORDS[@]}"; do
+        echo "  検索中: $keyword"
+        
+        # 過去24時間の話題ツイート（いいね・RTが多いもの）
+        bird search "$keyword" -n 10 --json --auth-token "$AUTH_TOKEN" --ct0 "$CT0" 2>/dev/null | \
+            jq -r '.[] | select(.likeCount > 5 or .retweetCount > 3) | "- @\(.author.username): \"\(.text | gsub("\n"; " ") | .[0:120])...\" (❤️\(.likeCount) 🔁\(.retweetCount))"' \
+            >> "$TREND_FILE" 2>/dev/null || true
+    done
+    
+    # 重複を削除してトップ5に絞る
+    sort "$TREND_FILE" | uniq | head -5 > "$TEMP_DIR/trends_unique.txt"
+    mv "$TEMP_DIR/trends_unique.txt" "$TREND_FILE"
+    
+    echo ""
+    echo "AIトレンド収集完了（$(wc -l < "$TREND_FILE") 件）"
+fi
+
+# ============================================
+# 2. GitHub検索（⭐500以上、複数キーワード）
 # ============================================
 echo "## 🐙 GitHub検索（⭐500以上、幅広く検索）..."
 
@@ -25,6 +71,9 @@ SEARCH_KEYWORDS=(
     "agent skill"
     "automation tool"
     "LLM tool"
+    "Claude skill"
+    "Clawdbot skill"
+    "AI skill"
 )
 
 GITHUB_JSON="[]"
@@ -63,7 +112,7 @@ fi
 # トップ15のツール名を抽出（5件選出のため余裕を持たせる）
 TOOL_NAMES=$(echo "$GITHUB_JSON" | jq -r '.[0:15] | .[].name' | tr '\n' ' ')
 
-# 各ツールのX言及数をカウント
+# 各ツールのX言及数をカウント（トレンド検索とは別）
 declare -A MENTION_COUNT
 
 if [ "$X_ENABLED" = true ]; then
@@ -80,7 +129,7 @@ if [ "$X_ENABLED" = true ]; then
 fi
 
 # ============================================
-# 3. スコア計算＆トップ5選出
+# 4. スコア計算＆トップ5選出
 # ============================================
 echo "## 🔥 スコア計算..."
 
@@ -115,18 +164,33 @@ echo "トップ5:"
 echo "$TOP5_JSON" | jq -r '.[] | "  🔥 \(.name) (⭐\(.stargazersCount), X言及:\(.x_mentions)件, スコア:\(.score))"'
 
 # ============================================
-# 4. レポート生成
+# 5. レポート生成
 # ============================================
 echo "## 📝 レポート生成中..."
 
 cat > "$REPORT_FILE" << 'HEADER'
-# 🔥 今日の話題（前日の注目ツール）
+# 🔥 今日の話題
 
 HEADER
 
 echo "**生成日:** $TODAY" >> "$REPORT_FILE"
 echo "" >> "$REPORT_FILE"
-echo "前日に話題になったMCPサーバー・ツールを厳選5件ピックアップっぴ！ 🦜" >> "$REPORT_FILE"
+
+# AIトレンドセクション
+if [ "$X_ENABLED" = true ] && [ -s "$TREND_FILE" ]; then
+    echo "## 📰 今日のAIトレンド" >> "$REPORT_FILE"
+    echo "" >> "$REPORT_FILE"
+    echo "Xで話題になっている最新AI情報っぴ！ 🦜" >> "$REPORT_FILE"
+    echo "" >> "$REPORT_FILE"
+    cat "$TREND_FILE" >> "$REPORT_FILE"
+    echo "" >> "$REPORT_FILE"
+fi
+
+echo "---" >> "$REPORT_FILE"
+echo "" >> "$REPORT_FILE"
+echo "## 🎯 注目のツール・MCPサーバー（トップ5）" >> "$REPORT_FILE"
+echo "" >> "$REPORT_FILE"
+echo "前日に話題になったMCPサーバー・AIツールを厳選5件ピックアップっぴ！ 🦜" >> "$REPORT_FILE"
 echo "" >> "$REPORT_FILE"
 echo "---" >> "$REPORT_FILE"
 echo "" >> "$REPORT_FILE"
@@ -355,7 +419,7 @@ echo "📄 詳細: \`$REPORT_FILE\`" >> "$DISCORD_FILE"
 echo "📤 Discord投稿用ファイル生成完了: $DISCORD_FILE"
 
 # ============================================
-# 6. Discord投稿フラグ作成
+# 7. Discord投稿フラグ作成
 # ============================================
 DISCORD_PENDING_FLAG="/root/clawd/.discord_post_pending"
 

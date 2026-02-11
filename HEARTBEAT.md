@@ -1,6 +1,27 @@
 # HEARTBEAT.md - 自動タスク
 
-## 0. 毎朝リサーチの自動実行チェック
+## 0. Discord投稿待ちチェック（最優先）
+**リサーチ完了後の自動投稿:**
+```bash
+if [ -f /root/clawd/.discord_post_pending ]; then
+    echo "🔔 Discord投稿待ちを検知"
+    # フラグファイルから情報読み取り
+    DATE=$(head -1 /root/clawd/.discord_post_pending)
+    REPORT_FILE=$(sed -n '2p' /root/clawd/.discord_post_pending)
+    
+    # レポートファイルが存在すればDiscord投稿
+    if [ -f "$REPORT_FILE" ]; then
+        echo "📤 $DATE のレポートをDiscord投稿します"
+        # ここでリッキーが自動投稿する
+        # （レポート内容を読み込んでmessage toolで投稿）
+    fi
+    
+    # フラグファイル削除
+    rm -f /root/clawd/.discord_post_pending
+fi
+```
+
+## 1. 毎朝リサーチの自動実行チェック
 **日本時間9:00（UTC 0:00）に自動実行：**
 ```bash
 TODAY=$(date +%Y-%m-%d)

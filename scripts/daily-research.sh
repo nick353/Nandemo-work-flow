@@ -13,14 +13,39 @@ mkdir -p "$RESEARCH_DIR"
 echo "🔍 話題性リサーチ開始: $TODAY"
 
 # ============================================
-# 1. GitHub検索（⭐500以上、最新順）
+# 1. GitHub検索（⭐500以上、複数キーワード）
 # ============================================
-echo "## 🐙 GitHub検索（⭐500以上）..."
+echo "## 🐙 GitHub検索（⭐500以上、幅広く検索）..."
 
-GITHUB_JSON=$(gh search repos "MCP server stars:>=500" --sort updated --limit 10 \
-    --json name,owner,description,stargazersCount,url,updatedAt 2>/dev/null || echo "[]")
+# 複数キーワードで検索
+SEARCH_KEYWORDS=(
+    "MCP server"
+    "AI agent"
+    "AI automation"
+    "agent skill"
+    "automation tool"
+    "LLM tool"
+)
 
-echo "$GITHUB_JSON" | jq -r '.[] | "  ⭐\(.stargazersCount) \(.name)"' | head -5
+GITHUB_JSON="[]"
+
+for keyword in "${SEARCH_KEYWORDS[@]}"; do
+    echo "  検索中: $keyword"
+    
+    # 各キーワードで検索（⭐500以上、最新順、3件）
+    RESULT=$(gh search repos "$keyword stars:>=500" --sort updated --limit 3 \
+        --json name,owner,description,stargazersCount,url,updatedAt 2>/dev/null || echo "[]")
+    
+    # 結果をマージ
+    GITHUB_JSON=$(echo "$GITHUB_JSON" "$RESULT" | jq -s '.[0] + .[1]')
+done
+
+# 重複を削除してスター数でソート
+GITHUB_JSON=$(echo "$GITHUB_JSON" | jq 'unique_by(.name) | sort_by(-.stargazersCount) | .[0:15]')
+
+echo ""
+echo "検索結果（重複削除後、トップ10）:"
+echo "$GITHUB_JSON" | jq -r '.[] | "  ⭐\(.stargazersCount) \(.name)"' | head -10
 
 # ============================================
 # 2. X言及数カウント（各ツール名で検索）
@@ -330,34 +355,19 @@ echo "📄 詳細: \`$REPORT_FILE\`" >> "$DISCORD_FILE"
 echo "📤 Discord投稿用ファイル生成完了: $DISCORD_FILE"
 
 # ============================================
-# 5. 強制Discord通知（完了報告）
+# 6. Discord投稿フラグ作成
 # ============================================
-DISCORD_CHANNEL_ID="${RESEARCH_DISCORD_CHANNEL:-1470296869870506156}"
+DISCORD_PENDING_FLAG="/root/clawd/.discord_post_pending"
 
 echo ""
-echo "📢 Discord通知を送信中..."
+echo "📢 Discord投稿準備中..."
 
-SUMMARY="# 🐥 毎朝リサーチ完了！
+# Discord投稿待ちフラグを作成（ハートビート時に検知される）
+echo "$TODAY" > "$DISCORD_PENDING_FLAG"
+echo "$REPORT_FILE" >> "$DISCORD_PENDING_FLAG"
+echo "1470296869870506156" >> "$DISCORD_PENDING_FLAG"  # チャンネルID
 
-**日付:** $TODAY
-
-✅ 話題のツール5件を厳選しました！
-
-📄 詳細レポート: \`research/$TODAY.md\`
-
-各ツールについて「このClawdbotに追加するとどうなるか」も記載してあるっぴ🐥
-"
-
-# Discord通知（失敗してもエラーにしない）
-if command -v clawdbot &> /dev/null; then
-    if clawdbot message send --target "$DISCORD_CHANNEL_ID" --message "$SUMMARY" 2>/dev/null; then
-        echo "✅ Discord通知完了"
-    else
-        echo "⚠️ Discord通知失敗（手動確認が必要）"
-    fi
-else
-    echo "⚠️ clawdbot コマンドが見つかりません"
-fi
-
+echo "✅ Discord投稿フラグ作成完了"
+echo "📍 次回ハートビート時に自動投稿されます"
 echo ""
-echo "🐥 全工程完了！"
+echo "🐥 リサーチ完了！"

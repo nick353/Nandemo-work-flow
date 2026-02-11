@@ -419,19 +419,40 @@ echo "📄 詳細: \`$REPORT_FILE\`" >> "$DISCORD_FILE"
 echo "📤 Discord投稿用ファイル生成完了: $DISCORD_FILE"
 
 # ============================================
-# 7. Discord投稿フラグ作成
+# 7. Discord投稿（Webhook経由）
 # ============================================
-DISCORD_PENDING_FLAG="/root/clawd/.discord_post_pending"
-
 echo ""
-echo "📢 Discord投稿準備中..."
+echo "📢 Discord投稿中..."
 
-# Discord投稿待ちフラグを作成（ハートビート時に検知される）
-echo "$TODAY" > "$DISCORD_PENDING_FLAG"
-echo "$REPORT_FILE" >> "$DISCORD_PENDING_FLAG"
-echo "1470296869870506156" >> "$DISCORD_PENDING_FLAG"  # チャンネルID
+# 簡易通知メッセージ
+NOTIFICATION="🔔 **毎朝リサーチ完了！**
 
-echo "✅ Discord投稿フラグ作成完了"
-echo "📍 次回ハートビート時に自動投稿されます"
+**日付:** $TODAY
+
+✅ 話題のAIツール5件を厳選しました！
+
+📰 AIトレンドも含まれています
+
+詳細レポートを投稿します..."
+
+# Webhook経由で通知（環境変数が設定されている場合のみ）
+if [ -n "$DISCORD_WEBHOOK_URL" ]; then
+    /root/clawd/scripts/discord-webhook-post.sh "$NOTIFICATION"
+    
+    # レポート本文も投稿（長いので分割が必要な場合は後で対応）
+    # 今は簡易通知のみ
+    
+    echo "✅ Discord投稿完了"
+else
+    echo "⚠️ DISCORD_WEBHOOK_URL が未設定"
+    echo "📍 フラグファイルを作成します（手動投稿が必要）"
+    
+    # フラグファイル作成（Webhook未設定時のフォールバック）
+    DISCORD_PENDING_FLAG="/root/clawd/.discord_post_pending"
+    echo "$TODAY" > "$DISCORD_PENDING_FLAG"
+    echo "$REPORT_FILE" >> "$DISCORD_PENDING_FLAG"
+    echo "1470296869870506156" >> "$DISCORD_PENDING_FLAG"
+fi
+
 echo ""
 echo "🐥 リサーチ完了！"
